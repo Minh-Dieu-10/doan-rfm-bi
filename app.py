@@ -20,7 +20,7 @@ if "logged_in" not in st.session_state:
     st.session_state["logged_in"] = False
 
 if not st.session_state["logged_in"]:
-    st.title("🔐 ĐĂNG NHẬP HỆ THỐNG")
+    st.title(" ĐĂNG NHẬP HỆ THỐNG")
     username = st.text_input("Tài khoản admin")
     password = st.text_input("Mật khẩu", type="password")
     if st.button("Đăng nhập"):
@@ -30,10 +30,10 @@ if not st.session_state["logged_in"]:
         else:
             st.error("Sai tài khoản hoặc mật khẩu!")
 else:
-    st.title("📊 HỆ THỐNG XỬ LÝ DỮ LIỆU & PHÂN TÍCH RFM KHÁCH HÀNG")
+    st.title(" HỆ THỐNG XỬ LÝ DỮ LIỆU & PHÂN TÍCH RFM KHÁCH HÀNG")
     st.sidebar.button("Đăng xuất", on_click=lambda: st.session_state.update({"logged_in": False}))
     
-    st.subheader("📥 Bước 1: Nạp file dữ liệu bán hàng")
+    st.subheader(" Bước 1: Nạp file dữ liệu bán hàng")
     uploaded_file = st.file_uploader("Chọn file OnlineRetail (.csv hoặc .xlsx)", type=["csv", "xlsx"])
     
     if uploaded_file is not None:
@@ -46,7 +46,7 @@ else:
             st.success(f"Đã tải file thành công! Số lượng bản ghi: {len(df):,}")
             st.dataframe(df.head(5))
             
-            st.subheader("⚙️ Bước 2: Kích hoạt quy trình xử lý dữ liệu (ETL)")
+            st.subheader(" Bước 2: Kích hoạt quy trình xử lý dữ liệu (ETL)")
             if st.button("Kích hoạt quy trình ETL"):
                 with st.spinner("Đang làm sạch dữ liệu, tính toán RFM và đẩy vào Supabase qua API..."):
                     # 1. Làm sạch dữ liệu
@@ -109,10 +109,38 @@ else:
                         # Thực hiện đẩy dữ liệu (Upsert dựa trên khóa chính customerid)
                         supabase.table("Dim_Customer").upsert(batch).execute()
                         
-                    st.success("🎉 Quy trình ETL hoàn tất! Dữ liệu đã đồng bộ an toàn qua API cổng Web.")
+                    st.success(" Quy trình ETL hoàn tất!")
                     st.balloons()
-                    
-                    st.write("📊 Kết quả phân tích phân khúc khách hàng:")
+                    # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV ---
+st.subheader(" Xuất báo cáo phân khúc khách hàng")
+
+# 1. Tạo dữ liệu file CSV (Dùng mã hóa utf-8-sig để Excel không bị lỗi font tiếng Việt)
+csv_data = rfm.to_csv(index=False).encode('utf-8-sig')
+
+# 2. Tạo dữ liệu file Excel bằng BytesIO (Nếu trong file app.py của bạn chưa import io thì nhớ thêm 'import io' ở đầu file nhé)
+import io
+buffer = io.BytesIO()
+with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+    rfm.to_excel(writer, index=False, sheet_name='RFM Segment')
+excel_data = buffer.getvalue()
+
+# 3. Hiển thị 2 nút bấm tải file trên giao diện (chia làm 2 cột cho đẹp)
+col_down1, col_down2 = st.columns(2)
+with col_down1:
+    st.download_button(
+        label=" Tải báo cáo (.xlsx)",
+        data=excel_data,
+        file_name="Bao_cao_phan_khuc_RFM.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
+with col_down2:
+    st.download_button(
+        label=" Tải dữ liệu (.csv)",
+        data=csv_data,
+        file_name="Du_lieu_phan_khuc_RFM.csv",
+        mime="text/csv"
+    )
+                    st.write(" Kết quả phân tích phân khúc khách hàng:")
                     st.dataframe(rfm.head(10))
         except Exception as ex:
             st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
