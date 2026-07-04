@@ -4,12 +4,12 @@ import psycopg2
 from datetime import datetime
 
 # --- THÔNG TIN KẾT NỐI SUPABASE ---
-# Thay thông tin của bạn từ ảnh image_a1557f.png vào đây
-DB_HOST = "aws-0-ap-southeast-1.pooler.supabase.com"
+# Thay thông tin từ supabase vào
+DB_HOST = "de.ipv4.anycast.v6.rocks"
 DB_NAME = "postgres"
-DB_USER = "postgres.cylljidqxzublpipypcu"
+DB_USER = "postgres"
 DB_PASS = "XW55mYXFlwrCFLgt"
-DB_PORT = "6543"
+DB_PORT = "5432"
 
 # --- HÀM KẾT NỐI DATABASE ---
 def get_db_connection():
