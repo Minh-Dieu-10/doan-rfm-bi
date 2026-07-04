@@ -144,5 +144,5 @@ else:
                             file_name="Du_lieu_phan_khuc_RFM.csv",
                             mime="text/csv"
                         )
-                        except Exception as ex:
-                        st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
+        except Exception as ex:
+            st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
