@@ -114,11 +114,8 @@ else:
 
                     st.write(" Kết quả phân tích phân khúc khách hàng:")
                     st.dataframe(rfm.head(10))
-        except Exception as ex:
-            st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
-
-
-        # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV ---
+                    
+                    # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV (ĐẶT Ở ĐÂY LÀ CHUẨN) ---
                     st.subheader("Xuất báo cáo phân khúc khách hàng")
 
                     # 1. Tạo dữ liệu file CSV
