@@ -2,17 +2,17 @@ import streamlit as st
 import pandas as pd
 from supabase import create_client, Client
 
-#--- THÔNG TIN KẾT NỐI API SUPABASE ---
+# --- THÔNG TIN KẾT NỐI API SUPABASE ---
 SUPABASE_URL = "https://cylljidqxzublpipypcu.supabase.co"
 SUPABASE_KEY = "sb_publishable_3DEP2QBBrM7uT0AZmj4Wpw_9fcnn8h6"
 
-#Khởi tạo kết nối qua API
+# Khởi tạo kết nối qua API
 try:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
     st.error(f"Lỗi khởi tạo Supabase Client: {e}")
 
-#--- CHƯƠNG TRÌNH CHÍNH (STREAMLIT APP) ---
+# --- CHƯƠNG TRÌNH CHÍNH (STREAMLIT APP) ---
 st.set_page_config(page_title="Hệ thống Phân tích RFM", layout="wide")
 
 if "logged_in" not in st.session_state:
@@ -69,11 +69,8 @@ else:
                         df['TotalAmount'] = df['Quantity'] * df['UnitPrice']
 
                         # --- ĐOẠN CODE TÍNH TOÁN RFM ---
-                     
-                        # Tính ngày hiện tại làm mốc (Ngày mua cuối cùng toàn hệ thống + 1)
                         snapshot_date = df['InvoiceDate'].max() + pd.Timedelta(days=1)
                         
-                        # Gom nhóm theo từng khách hàng
                         rfm = df.groupby('CustomerID').agg({
                             'InvoiceDate': lambda x: (snapshot_date - x.max()).days,
                             'InvoiceNo': 'nunique',
@@ -82,19 +79,19 @@ else:
                         
                         rfm.columns = ['CustomerID', 'Recency', 'Frequency', 'Monetary']
                         
-                        # Chia điểm từ 1-5 bằng qcut
-                        rfm['R_Score'] = pd.qcut(rfm['Recency'], 5, labels=[5, 4, 3, 2, 1], duplicates='drop')
-                        rfm['F_Score'] = pd.qcut(rfm['Frequency'].rank(method='first'), 5, labels=[1, 2, 3, 4, 5])
-                        rfm['M_Score'] = pd.qcut(rfm['Monetary'], 5, labels=[1, 2, 3, 4, 5])
+                        # Tính điểm tạm thời bằng các biến độc lập, không gán thẳng vào DataFrame gốc rfm
+                        r_labels = pd.qcut(rfm['Recency'], 5, labels=[5, 4, 3, 2, 1], duplicates='drop')
+                        f_labels = pd.qcut(rfm['Frequency'].rank(method='first'), 5, labels=[1, 2, 3, 4, 5])
+                        m_labels = pd.qcut(rfm['Monetary'], 5, labels=[1, 2, 3, 4, 5])
                         
-                        # Tính chuỗi RFM_Score
-                        rfm['RFM_Score'] = rfm['R_Score'].astype(str) + rfm['F_Score'].astype(str) + rfm['M_Score'].astype(str)
+                        # Tạo trực tiếp chuỗi RFM_Score
+                        rfm['RFM_Score'] = r_labels.astype(str) + f_labels.astype(str) + m_labels.astype(str)
                         
-                        # Định nghĩa hàm phân nhóm Marketing
-                        def segment_rfm(row):
-                            r = int(row['R_Score'])
-                            f = int(row['F_Score'])
-                            m = int(row['M_Score'])
+                        # Định nghĩa hàm phân nhóm Marketing dựa trên nhãn tạm thời
+                        def segment_rfm_direct(row_idx):
+                            r = int(r_labels.iloc[row_idx])
+                            f = int(f_labels.iloc[row_idx])
+                            m = int(m_labels.iloc[row_idx])
                             if r >= 4 and f >= 4 and m >= 4:
                                 return "Champions (Khách hàng VIP)"
                             elif r >= 3 and f >= 3:
@@ -104,12 +101,9 @@ else:
                             else:
                                 return "Normal Customers (Khách hàng phổ thông)"
                                 
-                        rfm['rfm_group'] = rfm.apply(segment_rfm, axis=1)
+                        rfm['rfm_group'] = [segment_rfm_direct(i) for i in range(len(rfm))]
 
                         # --- GỬI DỮ LIỆU LÊN SUPABASE ---
-                        # Chỉ lọc lấy đúng các cột có tồn tại trên database Supabase 
-                        columns_to_db = ['CustomerID', 'Recency', 'Frequency', 'Monetary', 'RFM_Score', 'rfm_group']
-                        rfm_filtered = rfm[columns_to_db]
                         # Đổi tên cột sang viết thường hoàn toàn để khớp 100% với database Supabase
                         rfm_to_send = rfm.rename(columns={
                             'CustomerID': 'customerid', 
@@ -119,7 +113,12 @@ else:
                             'RFM_Score': 'rfm_score',
                             'rfm_group': 'rfm_group'
                         })
-                        # Chuyển DataFrame thành list json để đẩy qua API
+                        
+                        # Đảm bảo danh sách cột gửi đi chỉ có đúng 6 cột tương ứng trong database
+                        db_columns = ['customerid', 'recency', 'frequency', 'monetary', 'rfm_score', 'rfm_group']
+                        rfm_to_send = rfm_to_send[db_columns]
+                        
+                        # Chuyển đổi và đẩy dữ liệu qua API
                         records = rfm_to_send.to_dict(orient="records")
                         batch_size = 1000
                         for i in range(0, len(records), batch_size):
@@ -136,28 +135,23 @@ else:
                 except Exception as ex:
                     st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
 
-            # --- 3. KHỐI HIỂN THỊ ĐỘC LẬP (GIỮ NGUYÊN GIAO DIỆN KHI DOWNLOAD FILE) ---
+            # --- 3. KHỐI HIỂN THỊ ĐỘC LẬP ---
             if st.session_state.etl_success and st.session_state.rfm_data is not None:
-                # Lấy dữ liệu từ bộ nhớ tạm ra để hiển thị
                 rfm_cached = st.session_state.rfm_data
                 
                 st.write("📊 Kết quả phân tích phân khúc khách hàng:")
                 st.dataframe(rfm_cached.head(10))
                 
-                # --- KHỐI LỆNH NÚT DOWNLOAD ---
                 st.subheader("📥 Xuất báo cáo phân khúc khách hàng")
 
-                # Tạo file CSV
                 csv_data = rfm_cached.to_csv(index=False).encode('utf-8-sig')
 
-                # Tạo file Excel bằng BytesIO
                 import io
                 buffer = io.BytesIO()
                 with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                     rfm_cached.to_excel(writer, index=False, sheet_name='RFM Segment')
                 excel_data = buffer.getvalue()
 
-                # Hiển thị 2 nút bấm tải file trên 2 cột
                 col_down1, col_down2 = st.columns(2)
                 with col_down1:
                     st.download_button(
@@ -174,11 +168,9 @@ else:
                         mime="text/csv"
                     )
 
-                # --- KHỐI LỆNH DASHBOARD MARKETING ---
                 st.markdown("---")
                 st.header("📊 Dashboard Marketing & Gợi ý Chiến lược RFM")
 
-                # Tính toán số liệu phân khúc
                 segment_counts = rfm_cached['rfm_group'].value_counts().reset_index()
                 segment_counts.columns = ['Phân khúc', 'Số lượng']
                 segment_counts['Tỷ lệ (%)'] = (segment_counts['Số lượng'] / segment_counts['Số lượng'].sum() * 100).round(2)
