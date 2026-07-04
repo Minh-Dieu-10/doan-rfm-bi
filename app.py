@@ -8,7 +8,7 @@ from datetime import datetime
 DB_HOST = "db.cylljidqxzublpipypcu.supabase.co"
 DB_NAME = "postgres"
 DB_USER = "postgres"
-DB_PASS = "Mật_khẩu_thật_bạn_đã_lưu_lúc_nãy_ở_Notepad"
+DB_PASS = "XW55mYXFlwrCFLgt"
 DB_PORT = "5432"
 
 # --- HÀM KẾT NỐI DATABASE ---
