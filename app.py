@@ -5,7 +5,7 @@ from supabase import create_client, Client
 # --- THÔNG TIN KẾT NỐI API SUPABASE ---
 # Lấy từ phần Project API (URL và anon key) của bạn
 SUPABASE_URL = "https://cylljidqxzublpipypcu.supabase.co"
-SUPABASE_KEY = "XW55mYXFlwrCFLgt"
+SUPABASE_KEY = "cylljidqxzublpipypcu"
 
 # Khởi tạo kết nối qua API
 try:
