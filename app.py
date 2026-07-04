@@ -5,7 +5,7 @@ from datetime import datetime
 
 # --- THÔNG TIN KẾT NỐI SUPABASE ---
 # Thay thông tin từ supabase vào
-DB_HOST = "de.ipv4.anycast.v6.rocks"
+DB_HOST = "52.74.252.201"
 DB_NAME = "postgres"
 DB_USER = "postgres"
 DB_PASS = "XW55mYXFlwrCFLgt"
