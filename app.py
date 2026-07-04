@@ -117,11 +117,11 @@ else:
                             'rfm_group': 'rfm_group'
                         })
                         # Chuyển DataFrame thành list json để đẩy qua API
-                        records = rfm.to_dict(orient="records")
+                        records = rfm_to_send.to_dict(orient="records")
                         batch_size = 1000
                         for i in range(0, len(records), batch_size):
                             batch = records[i:i+batch_size]
-                            supabase.table('"Dim_Customer"').upsert(batch).execute()
+                            supabase.table("Dim_Customer").upsert(batch).execute()
 
                         # LƯU KẾT QUẢ VÀO BỘ NHỚ TẠM SAU KHI THÀNH CÔNG
                         st.session_state.etl_success = True
