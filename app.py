@@ -7,7 +7,7 @@ from datetime import datetime
 # Thay thông tin từ supabase vào
 DB_HOST = "52.74.252.201"
 DB_NAME = "postgres"
-DB_USER = "postgres"
+DB_USER = "postgres.cylljidqxzublpipypcu"
 DB_PASS = "XW55mYXFlwrCFLgt"
 DB_PORT = "5432"
 
