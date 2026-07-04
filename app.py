@@ -111,7 +111,14 @@ else:
                         
                     st.success(" Quy trình ETL hoàn tất!")
                     st.balloons()
-                    # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV ---
+
+                    st.write(" Kết quả phân tích phân khúc khách hàng:")
+                    st.dataframe(rfm.head(10))
+        except Exception as ex:
+            st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
+
+
+                               # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV ---
 st.subheader(" Xuất báo cáo phân khúc khách hàng")
 
 # 1. Tạo dữ liệu file CSV (Dùng mã hóa utf-8-sig để Excel không bị lỗi font tiếng Việt)
@@ -140,7 +147,3 @@ with col_down2:
         file_name="Du_lieu_phan_khuc_RFM.csv",
         mime="text/csv"
     )
-                    st.write(" Kết quả phân tích phân khúc khách hàng:")
-                    st.dataframe(rfm.head(10))
-        except Exception as ex:
-            st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
