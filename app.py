@@ -7,7 +7,7 @@ from datetime import datetime
 # Thay thông tin của bạn từ ảnh image_a1557f.png vào đây
 DB_HOST = "aws-0-ap-southeast-1.pooler.supabase.com"
 DB_NAME = "postgres"
-DB_USER = "postgres"
+DB_USER = "postgres.cylljidqxzublpipypcu"
 DB_PASS = "XW55mYXFlwrCFLgt"
 DB_PORT = "6543"
 
