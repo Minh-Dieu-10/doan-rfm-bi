@@ -118,32 +118,32 @@ else:
             st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
 
 
-                               # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV ---
-st.subheader(" Xuất báo cáo phân khúc khách hàng")
+        # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV ---
+                    st.subheader("Xuất báo cáo phân khúc khách hàng")
 
-# 1. Tạo dữ liệu file CSV (Dùng mã hóa utf-8-sig để Excel không bị lỗi font tiếng Việt)
-csv_data = rfm.to_csv(index=False).encode('utf-8-sig')
+                    # 1. Tạo dữ liệu file CSV
+                    csv_data = rfm.to_csv(index=False).encode('utf-8-sig')
 
-# 2. Tạo dữ liệu file Excel bằng BytesIO (Nếu trong file app.py của bạn chưa import io thì nhớ thêm 'import io' ở đầu file nhé)
-import io
-buffer = io.BytesIO()
-with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-    rfm.to_excel(writer, index=False, sheet_name='RFM Segment')
-excel_data = buffer.getvalue()
+                    # 2. Tạo dữ liệu file Excel bằng BytesIO
+                    import io
+                    buffer = io.BytesIO()
+                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                        rfm.to_excel(writer, index=False, sheet_name='RFM Segment')
+                    excel_data = buffer.getvalue()
 
-# 3. Hiển thị 2 nút bấm tải file trên giao diện (chia làm 2 cột cho đẹp)
-col_down1, col_down2 = st.columns(2)
-with col_down1:
-    st.download_button(
-        label=" Tải báo cáo (.xlsx)",
-        data=excel_data,
-        file_name="Bao_cao_phan_khuc_RFM.xlsx",
-        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    )
-with col_down2:
-    st.download_button(
-        label=" Tải dữ liệu (.csv)",
-        data=csv_data,
-        file_name="Du_lieu_phan_khuc_RFM.csv",
-        mime="text/csv"
-    )
+                    # 3. Hiển thị 2 nút bấm tải file trên giao diện (chia làm 2 cột)
+                    col_down1, col_down2 = st.columns(2)
+                    with col_down1:
+                        st.download_button(
+                            label="🟢 Tải báo cáo (.xlsx)",
+                            data=excel_data,
+                            file_name="Bao_cao_phan_khuc_RFM.xlsx",
+                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        )
+                    with col_down2:
+                        st.download_button(
+                            label="🔵 Tải dữ liệu (.csv)",
+                            data=csv_data,
+                            file_name="Du_lieu_phan_khuc_RFM.csv",
+                            mime="text/csv"
+                        )
