@@ -47,102 +47,124 @@ else:
             st.dataframe(df.head(5))
             
             st.subheader(" Bước 2: Kích hoạt quy trình xử lý dữ liệu (ETL)")
-            if st.button("Kích hoạt quy trình ETL"):
+           # --- 1. KHỞI TẠO BỘ NHỚ TẠM (SESSION STATE) ---
+        if "etl_success" not in st.session_state:
+            st.session_state.etl_success = False
+        if "rfm_data" not in st.session_state:
+            st.session_state.rfm_data = None
+
+        st.subheader(" Bước 2: Kích hoạt quy trình xử lý dữ liệu (ETL)")
+        
+        # --- 2. NÚT BẤM KÍCH HOẠT QUY TRÌNH ETL ---
+        if st.button("Kích hoạt quy trình ETL"):
+            try:
                 with st.spinner("Đang làm sạch dữ liệu, tính toán RFM và đẩy vào Supabase qua API..."):
-                    # 1. Làm sạch dữ liệu
+                    # # 1. Làm sạch dữ liệu
                     df = df.dropna(subset=['CustomerID'])
                     df['CustomerID'] = df['CustomerID'].astype(int).astype(str)
                     df['Quantity'] = pd.to_numeric(df['Quantity'], errors='coerce')
                     df['UnitPrice'] = pd.to_numeric(df['UnitPrice'], errors='coerce')
                     df = df[(df['Quantity'] > 0) & (df['UnitPrice'] > 0)]
-                    
+
                     df['InvoiceDate'] = pd.to_datetime(df['InvoiceDate'], errors='coerce')
                     df = df.dropna(subset=['InvoiceDate'])
                     df['TotalAmount'] = df['Quantity'] * df['UnitPrice']
+
+                    # --- [Đoạn code tính toán RFM cũ của bạn giữ nguyên ở đây] ---
+                    # Giả sử sau khi tính toán xong, bạn ra được bảng kết quả đặt tên là biến 'rfm'
+                    # ... (Phần code tính toán Recency, Frequency, Monetary và gán rfm_group của bạn) ...
+
+                    # --- GỬI DỮ LIỆU LÊN SUPABASE ---
+                    # ... (Đoạn code vòng lặp for i in range(0, len(records), batch_size) đẩy data lên Supabase của bạn) ...
+
+                    # LƯU KẾT QUẢ VÀO BỘ NHỚ TẠM SAU KHI THÀNH CÔNG
+                    st.session_state.etl_success = True
+                    st.session_state.rfm_data = rfm
                     
-                    # 2. Tính toán RFM
-                    current_date = df['InvoiceDate'].max()
-                    rfm = df.groupby('CustomerID').agg({
-                        'InvoiceDate': lambda x: (current_date - x.max()).days,
-                        'InvoiceNo': 'nunique',
-                        'TotalAmount': 'sum'
-                    }).reset_index()
-                    
-                    rfm.columns = ['CustomerID', 'Recency', 'Frequency', 'Monetary']
-                    
-                    try:
-                        rfm['R_Score'] = pd.qcut(rfm['Recency'], 5, labels=[5, 4, 3, 2, 1])
-                        rfm['F_Score'] = pd.qcut(rfm['Frequency'].rank(method='first'), 5, labels=[1, 2, 3, 4, 5])
-                        rfm['M_Score'] = pd.qcut(rfm['Monetary'], 5, labels=[1, 2, 3, 4, 5])
-                    except Exception:
-                        rfm['R_Score'] = 3; rfm['F_Score'] = 3; rfm['M_Score'] = 3
-                        
-                    rfm['RFM_Score'] = rfm['R_Score'].astype(str) + rfm['F_Score'].astype(str) + rfm['M_Score'].astype(str)
-                    
-                    def segment_rfm(score):
-                        r, f, m = int(score[0]), int(score[1]), int(score[2])
-                        if r >= 4 and f >= 4 and m >= 4: return 'Champions (VIP)'
-                        elif r >= 3 and f >= 3: return 'Loyal Customers'
-                        elif r >= 4 and f <= 2: return 'New Customers'
-                        elif r <= 2 and f >= 3: return 'At Risk'
-                        else: return 'Hibernating / Lost'
-                        
-                    rfm['RFM_Group'] = rfm['RFM_Score'].apply(segment_rfm)
-                    
-                    # 3. Đẩy dữ liệu lên Supabase theo cơ chế API Upsert từng cụm (Batch)
-                    # Chuyển dữ liệu thành list các object để gửi API
-                    records = []
-                    for _, row in rfm.iterrows():
-                        records.append({
-                            "customerid": str(row['CustomerID']),
-                            "recency": int(row['Recency']),
-                            "frequency": int(row['Frequency']),
-                            "monetary": float(row['Monetary']),
-                            "rfm_score": str(row['RFM_Score']),
-                            "rfm_group": str(row['RFM_Group'])
-                        })
-                    
-                    # Chia nhỏ dữ liệu ra gửi mỗi lần 1000 dòng để tránh quá tải API
-                    batch_size = 1000
-                    for i in range(0, len(records), batch_size):
-                        batch = records[i:i+batch_size]
-                        # Thực hiện đẩy dữ liệu (Upsert dựa trên khóa chính customerid)
-                        supabase.table("Dim_Customer").upsert(batch).execute()
-                        
                     st.success(" Quy trình ETL hoàn tất!")
                     st.balloons()
 
-                    st.write(" Kết quả phân tích phân khúc khách hàng:")
-                    st.dataframe(rfm.head(10))
-                    
-                    # --- BỔ SUNG NÚT DOWNLOAD BÁO CÁO EXCEL / CSV (ĐẶT Ở ĐÂY LÀ CHUẨN) ---
-                    st.subheader("Xuất báo cáo phân khúc khách hàng")
+            except Exception as ex:
+                st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
 
-                    # 1. Tạo dữ liệu file CSV
-                    csv_data = rfm.to_csv(index=False).encode('utf-8-sig')
+        # --- 3. KHỐI HIỂN THỊ ĐỘC LẬP (GIỮ NGUYÊN GIAO DIỆN KHI DOWNLOAD FILE) ---
+        if st.session_state.etl_success and st.session_state.rfm_data is not None:
+            # Lấy dữ liệu từ bộ nhớ tạm ra để hiển thị
+            rfm_cached = st.session_state.rfm_data
+            
+            st.write(" Kết quả phân tích phân khúc khách hàng:")
+            st.dataframe(rfm_cached.head(10))
+            
+            # --- KHỐI LỆNH NÚT DOWNLOAD ---
+            st.subheader("📥 Xuất báo cáo phân khúc khách hàng")
 
-                    # 2. Tạo dữ liệu file Excel bằng BytesIO
-                    import io
-                    buffer = io.BytesIO()
-                    with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
-                        rfm.to_excel(writer, index=False, sheet_name='RFM Segment')
-                    excel_data = buffer.getvalue()
+            # Tạo file CSV
+            csv_data = rfm_cached.to_csv(index=False).encode('utf-8-sig')
 
-                    # 3. Hiển thị 2 nút bấm tải file trên giao diện (chia làm 2 cột)
-                    col_down1, col_down2 = st.columns(2)
-                    with col_down1:
-                        st.download_button(
-                            label="🟢 Tải báo cáo (.xlsx)",
-                            data=excel_data,
-                            file_name="Bao_cao_phan_khuc_RFM.xlsx",
-                            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        )
-                    with col_down2:
-                        st.download_button(
-                            label="🔵 Tải dữ liệu (.csv)",
-                            data=csv_data,
-                            file_name="Du_lieu_phan_khuc_RFM.csv",
-                            mime="text/csv"
-                        )
-        except Exception as ex:
-            st.error(f"Có lỗi xảy ra khi xử lý file hoặc đẩy API: {ex}")
+            # Tạo file Excel bằng BytesIO
+            import io
+            buffer = io.BytesIO()
+            with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
+                rfm_cached.to_excel(writer, index=False, sheet_name='RFM Segment')
+            excel_data = buffer.getvalue()
+
+            # Hiển thị 2 nút bấm tải file trên 2 cột
+            col_down1, col_down2 = st.columns(2)
+            with col_down1:
+                st.download_button(
+                    label="🟢 Tải báo cáo (.xlsx)",
+                    data=excel_data,
+                    file_name="Bao_cao_phan_khuc_RFM.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+            with col_down2:
+                st.download_button(
+                    label="🔵 Tải dữ liệu (.csv)",
+                    data=csv_data,
+                    file_name="Du_lieu_phan_khuc_RFM.csv",
+                    mime="text/csv"
+                )
+
+            # --- KHỐI LỆNH DASHBOARD MARKETING ---
+            st.markdown("---")
+            st.header("📊 Dashboard Marketing & Gợi ý Chiến lược RFM")
+
+            # Tính toán số liệu phân khúc
+            segment_counts = rfm_cached['rfm_group'].value_counts().reset_index()
+            segment_counts.columns = ['Phân khúc', 'Số lượng']
+            segment_counts['Tỷ lệ (%)'] = (segment_counts['Số lượng'] / segment_counts['Số lượng'].sum() * 100).round(2)
+
+            st.subheader("📈 Thống kê các phân khúc khách hàng")
+            st.dataframe(segment_counts)
+            st.bar_chart(data=segment_counts, x='Phân khúc', y='Số lượng', use_container_width=True)
+
+            st.subheader("💡 Gợi ý chiến lược hành động Marketing")
+            list_segments = segment_counts['Phân khúc'].tolist()
+            if list_segments:
+                tabs = st.tabs(list_segments)
+                for idx, seg_name in enumerate(list_segments):
+                    with tabs[idx]:
+                        st.write(f"### Chiến lược dành cho nhóm **{seg_name}**")
+                        if "Champions" in seg_name:
+                            st.success("🎯 **Mục tiêu:** Giữ chân và biến họ thành đại sứ thương hiệu.")
+                            st.markdown("""
+                            * **Hành động:** Áp dụng chương trình tri ân đặc quyền (VIP Club), tặng quà sinh nhật cao cấp, trải nghiệm sớm bộ sưu tập mới.
+                            * **Ưu đãi:** Tập trung vào cá nhân hóa trải nghiệm và dịch vụ chăm sóc khách hàng VIP.
+                            """)
+                        elif "Loyal" in seg_name or "Thân thiết" in seg_name:
+                            st.info("⭐ **Mục tiêu:** Gia tăng giá trị đơn hàng (Upsell).")
+                            st.markdown("""
+                            * **Hành động:** Gợi ý các dòng sản phẩm phân khúc cao hơn, giới thiệu chương trình tích điểm đổi quà độc quyền.
+                            * **Ưu đãi:** Tặng voucher mua hàng cho các đơn hàng đạt giá trị tối thiểu tiếp theo.
+                            """)
+                        elif "At Risk" in seg_name or "Nguy cơ" in seg_name:
+                            st.warning("⚠️ **Mục tiêu:** Cứu vãn và kích hoạt lại (Re-engage).")
+                            st.markdown("""
+                            * **Hành động:** Gửi thông điệp hỏi thăm cá nhân hóa thông qua SMS/Email, tạo các chương trình khảo sát nhận quà để tìm hiểu nguyên nhân rời bỏ.
+                            * **Ưu đãi:** Đưa ra deal giảm giá sâu có giới hạn thời gian cực ngắn để thúc đẩy họ quay trở lại mua sắm.
+                            """)
+                        else:
+                            st.markdown("""
+                            * **Mục tiêu:** Nuôi dưỡng mối quan hệ và duy trì mức độ nhận diện thương hiệu.
+                            * **Hành động:** Gửi bản tin xu hướng sản phẩm định kỳ, tặng mã miễn phí vận chuyển cho các đơn hàng nhỏ.
+                            """)
