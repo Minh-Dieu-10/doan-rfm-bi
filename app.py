@@ -68,8 +68,8 @@ else:
                         df = df.dropna(subset=['InvoiceDate'])
                         df['TotalAmount'] = df['Quantity'] * df['UnitPrice']
 
-                        # --- ĐOẠN CODE TÍNH TOÁN RFM CỦA BẠN ---
-                        # (Ví dụ mẫu cấu trúc tính toán RFM thực tế để Code không bị lỗi trống biến)
+                        # --- ĐOẠN CODE TÍNH TOÁN RFM ---
+                     
                         # Tính ngày hiện tại làm mốc (Ngày mua cuối cùng toàn hệ thống + 1)
                         snapshot_date = df['InvoiceDate'].max() + pd.Timedelta(days=1)
                         
@@ -107,6 +107,15 @@ else:
                         rfm['rfm_group'] = rfm.apply(segment_rfm, axis=1)
 
                         # --- GỬI DỮ LIỆU LÊN SUPABASE ---
+                        # Đổi tên cột sang viết thường hoàn toàn để khớp 100% với database Supabase
+                        rfm_to_send = rfm.rename(columns={
+                            'CustomerID': 'customerid', 
+                            'Recency': 'recency',
+                            'Frequency': 'frequency',
+                            'Monetary': 'monetary',
+                            'RFM_Score': 'rfm_score',
+                            'rfm_group': 'rfm_group'
+                        })
                         # Chuyển DataFrame thành list json để đẩy qua API
                         records = rfm.to_dict(orient="records")
                         batch_size = 1000
