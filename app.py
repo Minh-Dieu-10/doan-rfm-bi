@@ -107,6 +107,9 @@ else:
                         rfm['rfm_group'] = rfm.apply(segment_rfm, axis=1)
 
                         # --- GỬI DỮ LIỆU LÊN SUPABASE ---
+                        # Chỉ lọc lấy đúng các cột có tồn tại trên database Supabase 
+                        columns_to_db = ['CustomerID', 'Recency', 'Frequency', 'Monetary', 'RFM_Score', 'rfm_group']
+                        rfm_filtered = rfm[columns_to_db]
                         # Đổi tên cột sang viết thường hoàn toàn để khớp 100% với database Supabase
                         rfm_to_send = rfm.rename(columns={
                             'CustomerID': 'customerid', 
