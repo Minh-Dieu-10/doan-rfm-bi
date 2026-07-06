@@ -29,10 +29,10 @@ if not st.session_state["logged_in"]:
         else:
             st.error("Sai tài khoản hoặc mật khẩu!")
 else:
-    st.title("🚀 HỆ THỐNG XỬ LÝ DỮ LIỆU & PHÂN TÍCH RFM KHÁCH HÀNG")
+    st.title("HỆ THỐNG XỬ LÝ DỮ LIỆU & PHÂN TÍCH RFM KHÁCH HÀNG")
     st.sidebar.button("Đăng xuất", on_click=lambda: st.session_state.update({"logged_in": False}))
     
-    st.subheader("📁 Bước 1: Nạp file dữ liệu bán hàng")
+    st.subheader("Bước 1: Nạp file dữ liệu bán hàng")
     uploaded_file = st.file_uploader("Chọn file OnlineRetail (.csv hoặc .xlsx)", type=["csv", "xlsx"])
     
     if uploaded_file is not None:
@@ -51,7 +51,7 @@ else:
             if "rfm_data" not in st.session_state:
                 st.session_state.rfm_data = None
 
-            st.subheader("⚙️ Bước 2: Kích hoạt quy trình xử lý dữ liệu (ETL)")
+            st.subheader("Bước 2: Kích hoạt quy trình xử lý dữ liệu (ETL)")
             
             # --- 2. NÚT BẤM KÍCH HOẠT QUY TRÌNH ETL ---
             if st.button("Kích hoạt quy trình ETL"):
@@ -129,7 +129,7 @@ else:
                         st.session_state.etl_success = True
                         st.session_state.rfm_data = rfm
                         
-                        st.success("🎉 Quy trình ETL hoàn tất!")
+                        st.success("Quy trình ETL hoàn tất!")
                         st.balloons()
 
                 except Exception as ex:
@@ -139,10 +139,10 @@ else:
             if st.session_state.etl_success and st.session_state.rfm_data is not None:
                 rfm_cached = st.session_state.rfm_data
                 
-                st.write("📊 Kết quả phân tích phân khúc khách hàng:")
+                st.write("Kết quả phân tích phân khúc khách hàng:")
                 st.dataframe(rfm_cached.head(10))
                 
-                st.subheader("📥 Xuất báo cáo phân khúc khách hàng")
+                st.subheader("Xuất báo cáo phân khúc khách hàng")
 
                 csv_data = rfm_cached.to_csv(index=False).encode('utf-8-sig')
 
@@ -169,17 +169,17 @@ else:
                     )
 
                 st.markdown("---")
-                st.header("📊 Dashboard Marketing & Gợi ý Chiến lược RFM")
+                st.header("Dashboard Marketing & Gợi ý Chiến lược RFM")
 
                 segment_counts = rfm_cached['rfm_group'].value_counts().reset_index()
                 segment_counts.columns = ['Phân khúc', 'Số lượng']
                 segment_counts['Tỷ lệ (%)'] = (segment_counts['Số lượng'] / segment_counts['Số lượng'].sum() * 100).round(2)
 
-                st.subheader("📈 Thống kê các phân khúc khách hàng")
+                st.subheader("Thống kê các phân khúc khách hàng")
                 st.dataframe(segment_counts)
                 st.bar_chart(data=segment_counts, x='Phân khúc', y='Số lượng', use_container_width=True)
 
-                st.subheader("💡 Gợi ý chiến lược hành động Marketing")
+                st.subheader("Gợi ý chiến lược hành động Marketing")
                 list_segments = segment_counts['Phân khúc'].tolist()
                 if list_segments:
                     tabs = st.tabs(list_segments)
@@ -187,7 +187,7 @@ else:
                         with tabs[idx]:
                             st.write(f"### Chiến lược dành cho nhóm **{seg_name}**")
                             if "Champions" in seg_name:
-                                st.success("🎯 **Mục tiêu:** Giữ chân và biến họ thành đại sứ thương hiệu.")
+                                st.success("**Mục tiêu:** Giữ chân và biến họ thành đại sứ thương hiệu.")
                                 st.markdown("""
                                 * **Hành động:** Áp dụng chương trình tri ân đặc quyền (VIP Club), tặng quà sinh nhật cao cấp, trải nghiệm sớm bộ sưu tập mới.
                                 * **Ưu đãi:** Tập trung vào cá nhân hóa trải nghiệm và dịch vụ chăm sóc khách hàng VIP.
@@ -199,7 +199,7 @@ else:
                                 * **Ưu đãi:** Tặng voucher mua hàng cho các đơn hàng đạt giá trị tối thiểu tiếp theo.
                                 """)
                             elif "At Risk" in seg_name or "Nguy cơ" in seg_name:
-                                st.warning("⚠️ **Mục tiêu:** Cứu vãn và kích hoạt lại (Re-engage).")
+                                st.warning("**Mục tiêu:** Cứu vãn và kích hoạt lại.")
                                 thong_diep = "Chúng tôi nhớ bạn"
                                 st.markdown(f"""
                                 * **Hành động:** Gửi thông điệp hỏi thăm cá nhân hóa thông qua SMS/Email với nội dung '{thong_diep}', tạo các chương trình khảo sát nhận quà để tìm hiểu nguyên nhân rời bỏ.
