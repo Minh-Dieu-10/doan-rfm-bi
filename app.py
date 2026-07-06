@@ -193,7 +193,7 @@ else:
                                 * **Ưu đãi:** Tập trung vào cá nhân hóa trải nghiệm và dịch vụ chăm sóc khách hàng VIP.
                                 """)
                             elif "Loyal" in seg_name or "Thân thiết" in seg_name:
-                                st.info("⭐ **Mục tiêu:** Gia tăng giá trị đơn hàng (Upsell).")
+                                st.info(" **Mục tiêu:** Gia tăng giá trị đơn hàng (Upsell).")
                                 st.markdown("""
                                 * **Hành động:** Gợi ý các dòng sản phẩm phân khúc cao hơn, giới thiệu chương trình tích điểm đổi quà độc quyền.
                                 * **Ưu đãi:** Tặng voucher mua hàng cho các đơn hàng đạt giá trị tối thiểu tiếp theo.
