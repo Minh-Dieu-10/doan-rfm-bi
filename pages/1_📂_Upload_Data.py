@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from utils.proc import (
+from utils.processing import (
     clean_data,
     create_rfm,
     segment_customer,
