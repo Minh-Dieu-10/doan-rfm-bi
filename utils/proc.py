@@ -7,9 +7,10 @@ from mlxtend.frequent_patterns import apriori
 from mlxtend.frequent_patterns import association_rules
 
 
-# ==================================================
-# 1. CLEANING
-# ==================================================
+# ======================================================
+# 1. CLEAN DATA
+# ======================================================
+
 def clean_data(df):
 
     # Xóa CustomerID bị thiếu
@@ -19,10 +20,9 @@ def clean_data(df):
     df = df[df["Quantity"] > 0]
     df = df[df["UnitPrice"] > 0]
 
-    # Đổi kiểu dữ liệu
+    # Chuyển kiểu dữ liệu
     df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"])
 
-    # CustomerID
     df["CustomerID"] = df["CustomerID"].astype(int)
 
     # Thành tiền
@@ -31,9 +31,10 @@ def clean_data(df):
     return df
 
 
-# ==================================================
+# ======================================================
 # 2. RFM
-# ==================================================
+# ======================================================
+
 def create_rfm(df):
 
     reference_date = df["InvoiceDate"].max() + pd.Timedelta(days=1)
@@ -54,17 +55,22 @@ def create_rfm(df):
     rfm.columns = [
 
         "Recency",
+
         "Frequency",
+
         "Monetary"
 
     ]
 
-    return rfm.reset_index()
+    rfm = rfm.reset_index()
+
+    return rfm
 
 
-# ==================================================
+# ======================================================
 # 3. KMEANS
-# ==================================================
+# ======================================================
+
 def segment_customer(rfm):
 
     scaler = StandardScaler()
@@ -73,7 +79,15 @@ def segment_customer(rfm):
 
         rfm[
 
-            ["Recency", "Frequency", "Monetary"]
+            [
+
+                "Recency",
+
+                "Frequency",
+
+                "Monetary"
+
+            ]
 
         ]
 
@@ -81,7 +95,7 @@ def segment_customer(rfm):
 
     model = KMeans(
 
-        n_clusters=4,
+        n_clusters=5,
 
         random_state=42,
 
@@ -94,16 +108,25 @@ def segment_customer(rfm):
     return rfm
 
 
-# ==================================================
-# ĐỔI TÊN PHÂN KHÚC
-# ==================================================
+# ======================================================
+# 4. ĐỔI TÊN PHÂN KHÚC
+# ======================================================
+
 def rename_segment(rfm):
 
-    score = (
+    cluster_mean = (
 
         rfm.groupby("Cluster")[
 
-            ["Recency", "Frequency", "Monetary"]
+            [
+
+                "Recency",
+
+                "Frequency",
+
+                "Monetary"
+
+            ]
 
         ]
 
@@ -111,9 +134,15 @@ def rename_segment(rfm):
 
     )
 
-    order = score.sort_values(
+    order = cluster_mean.sort_values(
 
-        by=["Monetary", "Frequency"],
+        by=[
+
+            "Monetary",
+
+            "Frequency"
+
+        ],
 
         ascending=False
 
@@ -127,7 +156,9 @@ def rename_segment(rfm):
 
         order[2]: "Potential",
 
-        order[3]: "Hibernating"
+        order[3]: "At Risk",
+
+        order[4]: "Hibernating"
 
     }
 
@@ -136,16 +167,23 @@ def rename_segment(rfm):
     return rfm
 
 
-# ==================================================
-# 4. APRIORI
-# ==================================================
+# ======================================================
+# 5. APRIORI
+# ======================================================
+
 def recommendation(df):
 
     basket = (
 
         df.groupby(
 
-            ["InvoiceNo", "Description"]
+            [
+
+                "InvoiceNo",
+
+                "Description"
+
+            ]
 
         )["Quantity"]
 
@@ -157,7 +195,11 @@ def recommendation(df):
 
     )
 
-    basket = basket > 0
+    basket = basket.apply(
+
+        lambda x: x > 0
+
+    )
 
     frequent = apriori(
 
@@ -197,8 +239,28 @@ def recommendation(df):
 
     ]
 
-    rules["antecedents"] = rules["antecedents"].astype(str)
+    # Chuyển frozenset thành chuỗi
 
-    rules["consequents"] = rules["consequents"].astype(str)
+    rules["antecedents"] = rules["antecedents"].apply(
+
+        lambda x: ", ".join(list(x))
+
+    )
+
+    rules["consequents"] = rules["consequents"].apply(
+
+        lambda x: ", ".join(list(x))
+
+    )
+
+    rules = rules.sort_values(
+
+        by="confidence",
+
+        ascending=False
+
+    )
+
+    rules = rules.reset_index(drop=True)
 
     return rules
