@@ -4,3 +4,6 @@ numpy
 psycopg2-binary
 openpyxl
 supabase
+scikit-learn
+mlxtend
+plotly
