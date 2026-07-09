@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-
 from utils.processing import (
     clean_data,
     create_rfm,
@@ -8,181 +7,113 @@ from utils.processing import (
     rename_segment,
     recommendation
 )
-
 from utils.db import supabase
 
+st.set_page_config(page_title="Upload Data", page_icon="📂", layout="wide")
+st.title("📂 Upload và Xử lý dữ liệu lớn")
 
-st.set_page_config(page_title="Upload Data", page_icon="📂")
-
-st.title("📂 Upload và Phân tích dữ liệu")
-
-st.markdown("""
-Upload dữ liệu bán hàng để:
-
-- Làm sạch dữ liệu
-- Phân tích RFM
-- Phân khúc khách hàng bằng K-Means
-- Phân tích giỏ hàng bằng Apriori
-- Lưu kết quả lên Supabase
-""")
-
-uploaded_file = st.file_uploader(
-    "Chọn file dữ liệu",
-    type=["xlsx", "csv"]
-)
+uploaded_file = st.file_uploader("Chọn file dữ liệu bán hàng (Online Retail)", type=["xlsx", "csv"])
 
 if uploaded_file is not None:
-
-    # ==========================
-    # ĐỌC FILE
-    # ==========================
-
     if uploaded_file.name.endswith(".csv"):
-
         df = pd.read_csv(uploaded_file)
-
     else:
-
         df = pd.read_excel(uploaded_file)
 
     st.success("Đọc dữ liệu thành công!")
+    col_inf1, col_inf2 = st.columns(2)
+    with col_inf1:
+        st.metric("Số dòng thô nhận vào", f"{len(df):,}")
+    with col_inf2:
+        st.metric("Số cột", f"{len(df.columns)}")
 
-    st.write("### Xem trước dữ liệu")
-
-    st.dataframe(df.head())
-
-    st.write(f"Số dòng: {len(df)}")
-
-    st.write(f"Số cột: {len(df.columns)}")
-
-
-    # ==========================
-    # NÚT XỬ LÝ
-    # ==========================
-
-    if st.button("🚀 Bắt đầu xử lý"):
-
+    if st.button("🚀 Bắt đầu phân tích & Đồng bộ Cloud"):
         progress = st.progress(0)
-
         status = st.empty()
 
-
-        # ==========================
-        # CLEAN DATA
-        # ==========================
-
-        status.info("Đang làm sạch dữ liệu...")
-
+        # ==========================================
+        # 1. XỬ LÝ DỮ LIỆU THÔ (540K dòng chạy ngầm)
+        # ==========================================
+        status.info("Đang làm sạch dữ liệu giao dịch...")
         df = clean_data(df)
+        progress.progress(25)
 
-        progress.progress(20)
-
-
-        # ==========================
-        # RFM
-        # ==========================
-
-        status.info("Đang phân tích RFM...")
-
+        status.info("Đang tính toán các chỉ số định lượng RFM...")
         rfm = create_rfm(df)
+        progress.progress(50)
 
-        progress.progress(40)
-
-
-        # ==========================
-        # KMEANS
-        # ==========================
-
-        status.info("Đang phân cụm khách hàng...")
-
+        status.info("Đang phân cụm khách hàng bằng thuật toán K-Means...")
         rfm = segment_customer(rfm)
-
         rfm = rename_segment(rfm)
+        progress.progress(75)
 
-        progress.progress(60)
+        status.info("Đang khai phá luật kết hợp bằng thuật toán Apriori...")
+        # Giới hạn cụm dữ liệu phục vụ thuật toán sinh luật để tránh tràn RAM trên Cloud
+        df_apriori = df.head(50000) 
+        rules = recommendation(df_apriori)
+        progress.progress(90)
 
-
-        # ==========================
-        # APRIORI
-        # ==========================
-
-        status.info("Đang phân tích giỏ hàng...")
-
-        rules = recommendation(df)
-
-        progress.progress(80)
-
-
-        # ==========================
-        # UPLOAD SEGMENTS
-        # ==========================
-
-        status.info("Đang upload Segment...")
-
-        try:
-
-            supabase.table("segments").delete().neq(
-                "CustomerID",
-                0
-            ).execute()
-
-        except:
-            pass
-
-        segment_data = rfm.to_dict("records")
-
-        batch_size = 500
-
+        # ==========================================
+        # 2. ĐỒNG BỘ GHI ĐÈ (UPSERT) LÊN SUPABASE
+        # ==========================================
+        status.info("Đang đồng bộ kết quả phân khúc lên Supabase (Ghi đè để không tăng dung lượng)...")
+        
+        # Chuẩn hóa dữ liệu trước khi đẩy lên PostgreSQL
+        rfm_upload = rfm[["CustomerID", "Recency", "Frequency", "Monetary", "Cluster", "Segment"]].copy()
+        rfm_upload["CustomerID"] = rfm_upload["CustomerID"].astype(int)
+        rfm_upload["Cluster"] = rfm_upload["Cluster"].astype(int)
+        rfm_upload["Recency"] = rfm_upload["Recency"].astype(float)
+        rfm_upload["Frequency"] = rfm_upload["Frequency"].astype(float)
+        rfm_upload["Monetary"] = rfm_upload["Monetary"].astype(float)
+        
+        segment_data = rfm_upload.to_dict("records")
+        batch_size = 500 
+        
+        # Sử dụng .upsert() để cập nhật nếu trùng CustomerID, tránh tăng số dòng vô tội vạ
         for i in range(0, len(segment_data), batch_size):
-
             batch = segment_data[i:i+batch_size]
+            supabase.table("segments").upsert(batch).execute()
 
-            supabase.table("segments").insert(batch).execute()
-
-
-        # ==========================
-        # UPLOAD RECOMMENDATION
-        # ==========================
-
-        status.info("Đang upload Recommendation...")
-
+        status.info("Đang cập nhật tập luật gợi ý sản phẩm mới...")
         try:
-
-            supabase.table("recommendations").delete().neq(
-                "id",
-                0
-            ).execute()
-
+            # Xóa hẳn các luật cũ đi để thay bằng tập luật mới nhất
+            supabase.table("recommendations").delete().neq("id", 0).execute()
         except:
             pass
 
-        recommendation_data = rules.to_dict("records")
+        rules_upload = rules[["antecedents", "consequents", "support", "confidence", "lift"]].copy()
+        rules_upload["support"] = rules_upload["support"].astype(float)
+        rules_upload["confidence"] = rules_upload["confidence"].astype(float)
+        rules_upload["lift"] = rules_upload["lift"].astype(float)
 
+        # Chỉ lấy 100 luật mạnh nhất, vừa đủ xài cho Power BI & gợi ý CRM
+        recommendation_data = rules_upload.head(100).to_dict("records")
         for i in range(0, len(recommendation_data), batch_size):
-
             batch = recommendation_data[i:i+batch_size]
-
             supabase.table("recommendations").insert(batch).execute()
 
-
         progress.progress(100)
-
-        status.success("Hoàn thành!")
-
+        status.success(f"Hoàn thành! Đã tối ưu và lưu trữ thông tin của {len(rfm_upload):,} khách hàng.")
         st.balloons()
 
-        # ==========================
-        # HIỂN THỊ KẾT QUẢ
-        # ==========================
+        # ==========================================
+        # 3. HIỂN THỊ KẾT QUẢ & NÚT TẢI CHO POWER BI
+        # ==========================================
+        st.divider()
+        st.subheader("📥 Xuất dữ liệu tích hợp cho Power BI")
+        
+        # Cho phép tải file kết quả trực tiếp nếu không muốn kéo API từ Power BI
+        csv = rfm.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Tải file kết quả phân khúc khách hàng (CSV)",
+            data=csv,
+            file_name='customer_segments_results.csv',
+            mime='text/csv',
+        )
 
         st.divider()
+        st.subheader("📊 Xem trước kết quả phân khúc khách hàng")
+        st.dataframe(rfm.head(10))
 
-        st.subheader("📊 Phân khúc khách hàng")
-
-        st.dataframe(rfm.head(20))
-
-        st.divider()
-
-        st.subheader("🛒 Luật kết hợp")
-
-        st.dataframe(rules.head(20))
+        st.subheader("🛒 Xem trước các luật kết hợp sản phẩm")
+        st.dataframe(rules.head(10))
