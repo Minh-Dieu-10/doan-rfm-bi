@@ -72,7 +72,7 @@ if uploaded_file is not None:
         # Sử dụng .upsert() để cập nhật nếu trùng CustomerID, tránh tăng số dòng vô tội vạ
         for i in range(0, len(segment_data), batch_size):
             batch = segment_data[i:i+batch_size]
-            supabase.table("segments").upsert(batch).execute()
+            supabase.table("segments").upsert(batch, on_conflict="CustomerID").execute()
 
         status.info("Đang cập nhật tập luật gợi ý sản phẩm mới...")
         try:
