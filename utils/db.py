@@ -7,3 +7,8 @@ supabase=create_client(
     SUPABASE_URL,
     SUPABASE_KEY
 )
+@st.cache_resource
+def init_supabase() -> Client:
+    return create_client(SUPABASE_URL, SUPABASE_KEY)
+
+supabase = init_supabase()
