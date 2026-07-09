@@ -52,27 +52,31 @@ if uploaded_file is not None:
         df_apriori = df.head(50000) 
         rules = recommendation(df_apriori)
         progress.progress(90)
-
-        # ==========================================
-        # 2. ĐỒNG BỘ GHI ĐÈ (UPSERT) LÊN SUPABASE
-        # ==========================================
-        status.info("Đang đồng bộ kết quả phân khúc lên Supabase (Ghi đè để không tăng dung lượng)...")
-        
-        # Chuẩn hóa dữ liệu trước khi đẩy lên PostgreSQL
-        rfm_upload = rfm[["CustomerID", "Recency", "Frequency", "Monetary", "Cluster", "Segment"]].copy()
-        rfm_upload["CustomerID"] = rfm_upload["CustomerID"].astype(int)
-        rfm_upload["Cluster"] = rfm_upload["Cluster"].astype(int)
-        rfm_upload["Recency"] = rfm_upload["Recency"].astype(float)
-        rfm_upload["Frequency"] = rfm_upload["Frequency"].astype(float)
-        rfm_upload["Monetary"] = rfm_upload["Monetary"].astype(float)
-        
-        segment_data = rfm_upload.to_dict("records")
-        batch_size = 500 
-        
-        # Sử dụng .upsert() để cập nhật nếu trùng CustomerID, tránh tăng số dòng vô tội vạ
-        for i in range(0, len(segment_data), batch_size):
-            batch = segment_data[i:i+batch_size]
-            supabase.table("segments").upsert(batch, on_conflict="CustomerID").execute()
+    # ==========================================
+    # 2. ĐỒNG BỘ BẢNG SEGMENTS (XÓA CŨ - CHÈN MỚI)
+    # ==========================================
+    status.info("Đang làm sạch bảng phân khúc cũ trên Supabase...")
+    try:
+        supabase.table("segments").delete().neq("CustomerID", 0).execute()
+    except:
+        pass
+    
+    status.info("Đang đồng bộ kết quả phân khúc mới lên Supabase...")
+    rfm_upload = rfm[["CustomerID", "Recency", "Frequency", "Monetary", "Cluster", "Segment"]].copy()
+    rfm_upload["CustomerID"] = rfm_upload["CustomerID"].astype(int)
+    rfm_upload["Cluster"] = rfm_upload["Cluster"].astype(int)
+    rfm_upload["Recency"] = rfm_upload["Recency"].astype(float)
+    rfm_upload["Frequency"] = rfm_upload["Frequency"].astype(float)
+    rfm_upload["Monetary"] = rfm_upload["Monetary"].astype(float)
+    
+    segment_data = rfm_upload.to_dict("records")
+    batch_size = 500 
+    
+    for i in range(0, len(segment_data), batch_size):
+        batch = segment_data[i:i+batch_size]
+        supabase.table("segments").insert(batch).execute()
+   
+      
 
         status.info("Đang cập nhật tập luật gợi ý sản phẩm mới...")
         try:
