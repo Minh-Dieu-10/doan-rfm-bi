@@ -29,10 +29,10 @@ if uploaded_file is not None:
 
     if st.button("🚀 Bắt đầu phân tích & Đồng bộ Cloud"):
         progress = st.progress(0)
-        status = st.empty()
+        status = st.empty()  # Định nghĩa biến status chính xác tại đây
 
         # ==========================================
-        # 1. XỬ LÝ DỮ LIỆU THÔ (540K dòng chạy ngầm)
+        # 1. XỬ LÝ DỮ LIỆU THÔ (Chạy ngầm)
         # ==========================================
         status.info("Đang làm sạch dữ liệu giao dịch...")
         df = clean_data(df)
@@ -48,39 +48,38 @@ if uploaded_file is not None:
         progress.progress(75)
 
         status.info("Đang khai phá luật kết hợp bằng thuật toán Apriori...")
-        # Giới hạn cụm dữ liệu phục vụ thuật toán sinh luật để tránh tràn RAM trên Cloud
         df_apriori = df.head(50000) 
         rules = recommendation(df_apriori)
         progress.progress(90)
-    # ==========================================
-    # 2. ĐỒNG BỘ BẢNG SEGMENTS (XÓA CŨ - CHÈN MỚI)
-    # ==========================================
-    status.info("Đang làm sạch bảng phân khúc cũ trên Supabase...")
-    try:
-        supabase.table("segments").delete().neq("CustomerID", 0).execute()
-    except:
-        pass
-    
-    status.info("Đang đồng bộ kết quả phân khúc mới lên Supabase...")
-    rfm_upload = rfm[["CustomerID", "Recency", "Frequency", "Monetary", "Cluster", "Segment"]].copy()
-    rfm_upload["CustomerID"] = rfm_upload["CustomerID"].astype(int)
-    rfm_upload["Cluster"] = rfm_upload["Cluster"].astype(int)
-    rfm_upload["Recency"] = rfm_upload["Recency"].astype(float)
-    rfm_upload["Frequency"] = rfm_upload["Frequency"].astype(float)
-    rfm_upload["Monetary"] = rfm_upload["Monetary"].astype(float)
-    
-    segment_data = rfm_upload.to_dict("records")
-    batch_size = 500 
-    
-    for i in range(0, len(segment_data), batch_size):
-        batch = segment_data[i:i+batch_size]
-        supabase.table("segments").insert(batch).execute()
-   
-      
 
+        # ==========================================
+        # 2. ĐỒNG BỘ BẢNG SEGMENTS (XÓA CỦ - CHÈN MỚI)
+        # ==========================================
+        status.info("Đang làm sạch bảng phân khúc cũ trên Supabase...")
+        try:
+            supabase.table("segments").delete().neq("CustomerID", 0).execute()
+        except:
+            pass
+        
+        status.info("Đang đồng bộ kết quả phân khúc mới lên Supabase...")
+        rfm_upload = rfm[["CustomerID", "Recency", "Frequency", "Monetary", "Cluster", "Segment"]].copy()
+        rfm_upload["CustomerID"] = rfm_upload["CustomerID"].astype(int)
+        rfm_upload["Cluster"] = rfm_upload["Cluster"].astype(int)
+        rfm_upload["Recency"] = rfm_upload["Recency"].astype(float)
+        rfm_upload["Frequency"] = rfm_upload["Frequency"].astype(float)
+        rfm_upload["Monetary"] = rfm_upload["Monetary"].astype(float)
+        
+        segment_data = rfm_upload.to_dict("records")
+        batch_size = 500 
+        for i in range(0, len(segment_data), batch_size):
+            batch = segment_data[i:i+batch_size]
+            supabase.table("segments").insert(batch).execute()
+
+        # ==========================================
+        # 3. ĐỒNG BỘ BẢNG RECOMMENDATIONS (XÓA CŨ - CHÈN MỚI)
+        # ==========================================
         status.info("Đang cập nhật tập luật gợi ý sản phẩm mới...")
         try:
-            # Xóa hẳn các luật cũ đi để thay bằng tập luật mới nhất
             supabase.table("recommendations").delete().neq("id", 0).execute()
         except:
             pass
@@ -90,23 +89,20 @@ if uploaded_file is not None:
         rules_upload["confidence"] = rules_upload["confidence"].astype(float)
         rules_upload["lift"] = rules_upload["lift"].astype(float)
 
-        # Chỉ lấy 100 luật mạnh nhất, vừa đủ xài cho Power BI & gợi ý CRM
         recommendation_data = rules_upload.head(100).to_dict("records")
         for i in range(0, len(recommendation_data), batch_size):
             batch = recommendation_data[i:i+batch_size]
             supabase.table("recommendations").insert(batch).execute()
 
         progress.progress(100)
-        status.success(f"Hoàn thành! Đã tối ưu và lưu trữ thông tin của {len(rfm_upload):,} khách hàng.")
+        status.success(f"Hoàn thành! Đã tối ưu và lưu trữ thông tin lên Supabase.")
         st.balloons()
 
         # ==========================================
-        # 3. HIỂN THỊ KẾT QUẢ & NÚT TẢI CHO POWER BI
+        # 4. HIỂN THỊ KẾT QUẢ & NÚT TẢI CHO POWER BI
         # ==========================================
         st.divider()
         st.subheader("📥 Xuất dữ liệu tích hợp cho Power BI")
-        
-        # Cho phép tải file kết quả trực tiếp nếu không muốn kéo API từ Power BI
         csv = rfm.to_csv(index=False).encode('utf-8')
         st.download_button(
             label="Tải file kết quả phân khúc khách hàng (CSV)",
