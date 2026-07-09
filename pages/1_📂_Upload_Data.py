@@ -1,24 +1,40 @@
 import streamlit as st
+import pandas as pd
+
+from utils.cleaning import clean_data
+from utils.rfm import create_rfm
+from utils.kmeans import segment_customer
+from utils.apriori import recommendation
+from utils.upload import upload_table
 
 st.title("📂 Upload dữ liệu")
 
-file=st.file_uploader(
-    "Chọn file",
-    type=["csv","xlsx"]
+file = st.file_uploader(
+    "Chọn file Excel",
+    type=["xlsx","csv"]
 )
 
 if file:
 
-    st.success("Đã nhận file.")
+    if file.name.endswith(".csv"):
+        df = pd.read_csv(file)
+    else:
+        df = pd.read_excel(file)
 
-    if st.button("Chạy ETL"):
+    st.success("Đọc dữ liệu thành công!")
 
-        st.info("Cleaning...")
+    if st.button("🚀 Xử lý dữ liệu"):
 
-        st.info("RFM...")
+        df = clean_data(df)
 
-        st.info("KMeans...")
+        rfm = create_rfm(df)
 
-        st.info("Apriori...")
+        segment = segment_customer(rfm)
 
-        st.success("Đã lưu lên Supabase.")
+        recommend = recommendation(df)
+
+        upload_table(segment,"segments")
+
+        upload_table(recommend,"recommendations")
+
+        st.success("Hoàn tất!")
