@@ -48,7 +48,9 @@ if uploaded_file is not None:
         progress.progress(75)
 
         status.info("Đang khai phá luật kết hợp bằng thuật toán Apriori...")
-        df_apriori = df.head(50000) 
+        # Giới hạn số dòng nhỏ lại để server Free không bị tràn RAM
+        df_apriori = df.head(2000) 
+ 
         rules = recommendation(df_apriori)
         progress.progress(90)
 
