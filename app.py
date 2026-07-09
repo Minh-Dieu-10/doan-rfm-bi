@@ -1,16 +1,15 @@
 import streamlit as st
 
-st.set_page_config(page_title="CRM Analytics System", page_icon="📈", layout="wide")
+st.set_page_config(page_title="CRM Analytics", page_icon="📈", layout="wide")
 
-st.title("🏛️ Hệ Thống CRM Phân Tích Phân Khúc Khách Hàng & Đề Xuất Sản Phẩm")
-st.subheader("Đồ án Hệ thống Thông tin Quản lý (MIS)")
+st.title("🏛️ Hệ Thống CRM Phân Tích Phân Khúc & Đề Xuất Sản Phẩm")
+st.caption("Đồ án Hệ thống Thông tin Quản lý (MIS)")
 
+st.divider()
+
+st.subheader("🛠️ Các chức năng chính:")
 st.markdown("""
-Chào mừng bạn đến với ứng dụng quản trị quan hệ khách hàng thông minh. Hệ thống được xây dựng nhằm giải quyết bài toán tối ưu hóa chiến lược tiếp thị và gia tăng doanh số thông qua khai phá dữ liệu hành vi.
-
-### Đọc các chức năng chính của hệ thống tại thanh bên trái:
-1. **📂 Upload Data**: Nhận file lịch sử giao dịch thô, tự động xử lý sạch, chạy mô hình định lượng **RFM**, phân cụm bằng thuật toán học không giám sát **K-Means**, khai phá luật kết hợp **Apriori** và đồng bộ lên Cloud Database (Supabase).
-2. **👤 Customers**: Dashboard theo dõi các nhóm khách hàng sau phân khúc (Champions, Loyal, At Risk...).
-3. **🛒 Recommendations**: Giao diện gợi ý chéo sản phẩm thông minh dựa trên lịch sử mua sắm thực tế của toàn hệ thống.
-
-
+- **📂 Upload Data**: Tải file giao dịch lên để làm sạch, phân cụm **K-Means** và chạy thuật toán **Apriori**.
+- **👤 Customers**: Xem kết quả phân khúc khách hàng (RFM) qua các biểu đồ trực quan.
+- **🛒 Recommendations**: Hệ thống thử nghiệm và gợi ý sản phẩm đi kèm khi mua sắm.
+""")
