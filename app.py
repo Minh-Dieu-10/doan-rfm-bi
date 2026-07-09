@@ -13,11 +13,4 @@ Chào mừng bạn đến với ứng dụng quản trị quan hệ khách hàng
 2. **👤 Customers**: Dashboard theo dõi các nhóm khách hàng sau phân khúc (Champions, Loyal, At Risk...).
 3. **🛒 Recommendations**: Giao diện gợi ý chéo sản phẩm thông minh dựa trên lịch sử mua sắm thực tế của toàn hệ thống.
 
----
-### 🛠️ Kiến Trúc Hệ Thống Sử Dụng:
-- **Frontend / Dashboard UI:** Streamlit Web Framework
-- **Data Engine:** Pandas, Scikit-learn (K-Means), Mlxtend (Apriori)
-- **Database Cloud:** PostgreSQL thông qua Supabase Platform
-""")
 
-st.info("💡 Mẹo bảo vệ đồ án: Hãy bắt đầu bằng cách vào mục 'Upload Data' ở thanh menu bên trái để tải tệp dữ liệu mẫu lên trước nhé!")
